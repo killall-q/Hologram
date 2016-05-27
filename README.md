@@ -23,6 +23,7 @@ Hologram takes, for arbitrary points, 3D Cartesian coordinates (___x___, ___y___
 Let's build its algorithm from the ground up.
 
 #### No Rotation or Perspective
+![Teapot1](Readme%20Images/Teapot1.png)
 
 Suppose you have an isometric view of a set of points in 3D space such that the _y_-axis is parallel to your line of sight, with no rotation or perspective. In this situation, the _y_ coordinates of the points do not matter.
 
@@ -42,6 +43,7 @@ xyScale = dispR / maxR
 __`maxR`__ is a scalar value calculated when parsing the set of points, that takes the absolute value maximum of _x_, _y_, and _z_ coordinates, and calculates a "good enough" approximation of the maximum possible radius from the origin using the [3D distance formula](https://en.wikipedia.org/wiki/Euclidean_distance).
 
 #### One Angle of Rotation: Pitch
+![Teapot2](Readme%20Images/Teapot2.png)
 
 Now we add pitch, which is rotation about the _x_-axis, or swivel up/down. This addition doesn't affect the _x_ coordinate.
 ```lua
@@ -55,6 +57,7 @@ There are mathematical tools that describe smooth oscillation between 1 and -1, 
 We know to multiply the _z_ coordinate by cosine of the pitch angle because at 0 degrees, it must be multiplied by 1. Similar logic follows for the _y_ coordinate.
 
 #### Two Angles of Rotation: Pitch & Roll
+![Teapot3](Readme%20Images/Teapot3.png)
 
 Roll, φ (phi), is rotation about _y_-axis, only, in this implementation, the _y_-axis of rotation itself is subject to the pitch angle. It works exactly like a [gimbal](https://en.wikipedia.org/wiki/Gimbal).
 
@@ -68,6 +71,7 @@ This may be easier to picture if you imagine that the 3D object you are rotating
 Now if you mark a dot on this disc whose pitch rotation we have already explained, the position of that dot will vary on the plane of the disc based on the effect of the roll angle on the _x_ and _z_ coordinates of the dot. At 0 roll angle, the dot's _x_ coordinate is all that matters to screen space _x_, and the dot's _z_ coordinate is all that matters to screen space _y_... thus we know where to apply sine and cosine.
 
 #### Three Angles of Rotation: Pitch, Roll, & Yaw
+![Teapot4](Readme Images/Teapot4.png)
 
 Yaw, ψ (psi), is rotation about the _z_-axis. As you might guess, the _z_-axis of rotation is subject to the pitch _and_ roll angles.
 ```lua
@@ -77,6 +81,7 @@ point[i]:SetY(((coord.z[i] * cosPhi - (coord.x[i] * cosPsi + coord.y[i] * sinPsi
 With two angles of rotation, we had to replace all instances of _x_ and _z_ coordinates, the coordinates that are affected by rotations about the _y_-axis of rotation. Now, with yaw, we must replace all instances of _x_ (again) and _y_ coordinates, as they are affected by rotations about the _z_-axis of rotation. The _x_ coordinate is in both `SetX` and `SetY`, and we replace it with the same thing in both places.
 
 #### Perspective
+![Teapot5](Readme%20Images/Teapot5.png)
 
 This requires calculating screen space _z_-depth, but all the work has already been done. The formula for _z_-depth is almost identical to the final formula for screen space _y_. All that changes is sin and cos θ.
 
@@ -93,3 +98,5 @@ We then use it to obtain a value is greater than 1 if the point is closer to us 
 #### Closing
 
 This isn't the only possible correct formula for 3D rotation. It is only correct for this set up, where the roll axis is specifically dependent on pitch, and the yaw axis is specifically dependent on both pitch and roll. For example, a different formula would be required for fixed axes of rotation. The formula would also change slightly depending on where you consider the zeroes of the rotation angles to be.
+
+This work is licensed under a [Creative Commons Attribution-NonCommercial-ShareAlike 3.0 License](http://creativecommons.org/licenses/by-nc-sa/3.0/).
