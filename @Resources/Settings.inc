@@ -6,7 +6,6 @@ Psi=0
 Omega=-0.01
 Perspective=0.2
 Update=-1
-
 File=#@#Models\Globe.obj
 Edge=
 BenchT=
