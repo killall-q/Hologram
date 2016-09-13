@@ -66,20 +66,20 @@ Yaw, _ψ_ (psi), is rotation about the _z_-axis. As you might guess, the _z_-axi
 
 ![Formula4](Readme%20Images/Formula4.png)
 
-With two angles of rotation, we had to replace all instances of _x_ and _z_ coordinates, the coordinates that are affected by rotations about the _y_-axis of rotation. Now, with yaw, we must replace all instances of _x_ (again) and _y_ coordinates, as they are affected by rotations about the _z_-axis of rotation. The _x_ coordinate is in both `SetX` and `SetY`, and we replace it with the same thing in both places.
+With two angles of rotation, we had to replace all instances of _x_ and _z_ coordinates, the coordinates that are affected by rotations about the _y_-axis of rotation. Now, with yaw, we must replace all instances of _x_ (again) and _y_ coordinates, as they are affected by rotations about the _z_-axis of rotation. The _x_ coordinate is in both _x'_ and _y'_, and we replace it with the same thing in both places.
 
 #### Perspective
 ![Teapot5](Readme%20Images/Teapot5.png)
 
 This requires calculating screen space _z_-depth, but all the work has already been done. The formula for _z_-depth is almost identical to the final formula for screen space _y_. All that changes is sin and cos θ.
 
-This is not a true simulation of field of view (FOV). It merely approximates the effect by scaling up closer objects while shrinking far objects. __`perspective`__ is a scalar used to control the strength of the FOV approximation. At 0, the effect is negated.
-
 ![Formula5](Readme%20Images/Formula5.png)
 
 This formula makes sense once you understand that if you rotated the starting angle for θ by 90°, screen space _y_ would become _z_-depth. That is, in essence, what we are doing by changing cos θ to -sin θ and sin θ to cos θ, because sine and cosine are 90° offset from each other.
 
 We then use it to obtain a value is greater than 1 if the point is closer to us than the origin, and less than 1 if it is farther, and use it to scale the final result.
+
+This is not a true simulation of field of view (FOV). It merely approximates the effect by scaling up closer objects while shrinking far objects. __`perspective`__ is a scalar used to control the strength of the FOV approximation. At 0, the effect is negated.
 
 #### Closing
 
