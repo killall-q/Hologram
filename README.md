@@ -60,7 +60,7 @@ This may be easier to picture if you imagine that the 3D object you are rotating
 Now if you mark a dot on this disc whose pitch rotation we have already explained, the position of that dot will vary on the plane of the disc based on the effect of the roll angle on the _x_ and _z_ coordinates of the dot. At 0 roll angle, the dot's _x_ coordinate is all that matters to screen space _x_, and the dot's _z_ coordinate is all that matters to screen space _y_... thus we know where to apply sine and cosine.
 
 #### Three Angles of Rotation: Pitch, Roll, & Yaw
-![Teapot4](Readme Images/Teapot4.png)
+![Teapot4](Readme%20Images/Teapot4.png)
 
 Yaw, _ψ_ (psi), is rotation about the _z_-axis. As you might guess, the _z_-axis of rotation is subject to the pitch _and_ roll angles.
 
