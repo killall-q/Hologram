@@ -14,12 +14,10 @@ function Initialize()
     moveFlag = false
     LoadFile()
     local update = SKIN:GetVariable('Update')
-    SKIN:Bang('[!SetOption Edge'..(edge or 0)..'xSet SolidColor FF0000][!SetOption Edge'..(edge or 0)..'xSet MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!SetOption PerspectiveSlider X '..(101 + perspective * 90)..'][!SetOption Omega'..update..' SolidColor FF0000][!SetOption Omega'..update..' LeftMouseUpAction ""][!SetOption Omega'..update..' MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"]')
+    SKIN:Bang('[!SetOption Edge'..(edge or 0)..'xSet SolidColor FF0000][!SetOption Edge'..(edge or 0)..'xSet MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!SetOption PerspectiveSlider X '..(101 + perspective * 90)..'][!SetOption Omega'..update..' SolidColor FF0000][!SetOption Omega'..update..' LeftMouseUpAction ""][!SetOption Omega'..update..' MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!SetOption OmegaSlider X '..(130 + omega * 2250)..'][!SetOption OmegaVal Text '..(omega * 250)..']')
     if update == '-1' then
         omega = 0
-        SKIN:Bang('[!SetOptionGroup Omega FontColor FFFFFF30][!SetOptionGroup Omega SolidColor 50505020][!SetOptionGroup Omega LeftMouseUpAction ""][!SetOptionGroup Omega MouseOverAction []][!SetOptionGroup Omega MouseLeaveAction []]')
-    else
-        SKIN:Bang('[!SetOption Omega'..omega..' SolidColor FF0000][!SetOption Omega'..omega..' MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"]')
+        SKIN:Bang('[!SetOption OmegaSlider SolidColor FFFFFF80][!SetOption OmegaVal FontColor FFFFFF80][!SetOption OmegaSet SolidColor 50505060][!SetOption OmegaSet LeftMouseUpAction ""][!SetOption OmegaSet MouseScrollUpAction ""][!SetOption OmegaSet MouseScrollDownAction ""][!SetOption OmegaSet MouseOverAction []][!SetOption OmegaSet MouseLeaveAction []]')
     end
 end
 
@@ -201,6 +199,13 @@ function Preload()
     EstimateLoadTime(tonumber(SKIN:GetVariable('PreloadSet')))
 end
 
+function SetPixS()
+    local pixS = tonumber(SKIN:GetVariable('PixSSet'))
+    if pixS and pixS > 0 then
+        SKIN:Bang('[!SetOptionGroup P W "#PixSSet#"][!SetOptionGroup P H "#PixSSet#"][!SetOption PixSSet Text "#PixSSet#"][!SetVariable PixS "#PixSSet#"][!WriteKeyValue Variables PixS "#PixSSet#" "#@#Settings.inc"][!SetOption Handle MouseLeaveAction "[!HideMeterGroup Control][!HideMeterGroup Set][!SetOption Handle SolidColor 00000001][!UpdateMeter Handle][!Redraw]"][!UpdateMeter *][!Redraw]')
+    end
+end
+
 function SetEdge(n)
     SKIN:Bang('[!SetOption Edge'..(edge or 0)..'xSet SolidColor 505050E0][!SetOption Edge'..(edge or 0)..'xSet MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor 505050E0][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!SetOption Edge'..(n or 0)..'xSet SolidColor FF0000][!SetOption Edge'..(n or 0)..'xSet MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!WriteKeyValue Variables Edge '..(n or '""')..' "#@#Settings.inc"][!UpdateMeterGroup Edge]')
     edge = tonumber(n)
@@ -223,8 +228,13 @@ function SetColor()
     end
 end
 
-function SetOmega(n)
+function SetOmega(n, m)
     -- Set angular velocity
-    SKIN:Bang('[!SetOption Omega'..omega..' SolidColor 505050E0][!SetOption Omega'..omega..' MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor 505050E0][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!SetOption Omega'..n..' MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!WriteKeyValue Variables Omega '..n..' "#@#Settings.inc"][!UpdateMeterGroup Set][!Redraw]')
-    omega = tonumber(n)
+    if m then
+        omega = math.floor(m * 0.11) * 0.004 - 0.02
+    elseif omega + n <= 0.02 and omega + n >= -0.02 then
+        omega = math.floor((omega + n) * 250 + 0.5) * 0.004
+    else return end
+    SKIN:GetMeter('OmegaSlider'):SetX(130 + omega * 2250)
+    SKIN:Bang('[!SetOption OmegaVal Text '..(omega * 250)..'][!WriteKeyValue Variables Omega '..omega..' "#@#Settings.inc"]')
 end
