@@ -14,10 +14,10 @@ function Initialize()
     moveFlag = false
     LoadFile()
     local update = SKIN:GetVariable('Update')
-    SKIN:Bang('[!SetOption Edge'..(edge or 0)..'xSet SolidColor FF0000][!SetOption Edge'..(edge or 0)..'xSet MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!SetOption PerspectiveSlider X '..(101 + perspective * 90)..'][!SetOption Omega'..update..' SolidColor FF0000][!SetOption Omega'..update..' LeftMouseUpAction ""][!SetOption Omega'..update..' MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!SetOption OmegaSlider X '..(130 + omega * 2250)..'][!SetOption OmegaVal Text '..(omega * 250)..']')
+    SKIN:Bang('[!SetOption Edge'..(edge or 0)..'xSet SolidColor FF0000][!SetOption Edge'..(edge or 0)..'xSet MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!SetOption PerspectiveSlider X '..(101 + perspective * 90)..'][!SetOption Omega'..update..' SolidColor FF0000][!ClearMouseAction Omega'..update..' LeftMouseUpAction][!SetOption Omega'..update..' MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!SetOption OmegaSlider X '..(130 + omega * 2250)..'][!SetOption OmegaVal Text '..(omega * 250)..']')
     if update == '-1' then
         omega = 0
-        SKIN:Bang('[!SetOption OmegaSlider SolidColor FFFFFF80][!SetOption OmegaVal FontColor FFFFFF80][!SetOption OmegaSet SolidColor 50505060][!SetOption OmegaSet LeftMouseUpAction ""][!SetOption OmegaSet MouseScrollUpAction ""][!SetOption OmegaSet MouseScrollDownAction ""][!SetOption OmegaSet MouseOverAction []][!SetOption OmegaSet MouseLeaveAction []]')
+        SKIN:Bang('[!SetOption OmegaSlider SolidColor FFFFFF80][!SetOption OmegaVal FontColor FFFFFF80][!SetOption OmegaSet SolidColor 50505060][!ClearMouseAction OmegaSet LeftMouseUpAction][!ClearMouseAction OmegaSet MouseScrollUpAction][!ClearMouseAction OmegaSet MouseScrollDownAction][!DisableMouseAction OmegaSet MouseOverAction][!DisableMouseAction OmegaSet MouseLeaveAction]')
     end
 end
 
@@ -76,7 +76,7 @@ function ScanFile()
         Invalid('FILE')
     elseif p <= #point then
         -- Load without refreshing
-        SKIN:Bang('[!SetVariable File """#FileSet#"""][!WriteKeyValue Variables File """#FileSet#""" "#@#Settings.inc"][!SetVariable Edge '..(edge or '""')..'][!WriteKeyValue Variables Edge '..(edge or '""')..' "#@#Settings.inc"][!SetOption Handle MouseLeaveAction "[!HideMeterGroup Control][!HideMeterGroup Set][!SetOption Handle SolidColor 00000001][!UpdateMeter Handle][!Redraw]"][!UpdateMeter Handle][!HideMeterGroup Est]')
+        SKIN:Bang('[!SetVariable File """#FileSet#"""][!WriteKeyValue Variables File """#FileSet#""" "#@#Settings.inc"][!SetVariable Edge '..(edge or '""')..'][!WriteKeyValue Variables Edge '..(edge or '""')..' "#@#Settings.inc"][!EnableMouseAction Handle MouseLeaveAction][!HideMeterGroup Est]')
         LoadFile()
     else
         EstimateLoadTime(p)
@@ -84,13 +84,13 @@ function ScanFile()
 end
 
 function Invalid(s)
-    SKIN:Bang('[!SetOption FileSet Text "INVALID '..s..'"][!SetOption Handle MouseLeaveAction "[!HideMeterGroup Control][!HideMeterGroup Set][!SetOption Handle SolidColor 00000001][!UpdateMeter Handle][!Redraw]"][!UpdateMeter FileSet][!UpdateMeter Handle][!HideMeterGroup Est][!Redraw]')
+    SKIN:Bang('[!SetOption FileSet Text "INVALID '..s..'"][!EnableMouseAction Handle MouseLeaveAction][!UpdateMeter FileSet][!HideMeterGroup Est][!Redraw]')
 end
 
 function EstimateLoadTime(p)
     points = p
     local estT = loadTCoeff * p^2
-    SKIN:Bang('[!SetOption FileSet Text #*FileSet*#][!SetOption EstTime Postfix '..string.format('%s.%03u', os.date('!%H:%M:%S', estT), math.fmod(estT, 1) * 1000)..'][!SetOption EstPoints Postfix '..p..'][!SetOption Handle MouseLeaveAction ""][!UpdateMeter FileSet][!UpdateMeter Handle][!UpdateMeterGroup Est][!ShowMeterGroup Est][!Redraw]')
+    SKIN:Bang('[!SetOption FileSet Text #*FileSet*#][!SetOption EstTime Postfix '..string.format('%s.%03u', os.date('!%H:%M:%S', estT), math.fmod(estT, 1) * 1000)..'][!SetOption EstPoints Postfix '..p..'][!ClearMouseAction Handle MouseLeaveAction][!UpdateMeter FileSet][!UpdateMeterGroup Est][!ShowMeterGroup Est][!Redraw]')
 end
 
 function LoadFile()
@@ -191,7 +191,7 @@ end
 
 function Cancel()
     SetEdge(tonumber(SKIN:GetVariable('Edge')))
-    SKIN:Bang('[!SetOption FileSet Text #*FileSet*#][!HideMeterGroup Est][!SetOption Handle MouseLeaveAction "[!HideMeterGroup Control][!HideMeterGroup Set][!SetOption Handle SolidColor 00000001][!UpdateMeter Handle][!Redraw]"][!UpdateMeter Handle][!Redraw]')
+    SKIN:Bang('[!SetOption FileSet Text #*FileSet*#][!HideMeterGroup Est][!EnableMouseAction Handle MouseLeaveAction][!Redraw]')
 end
 
 function Preload()
@@ -202,7 +202,7 @@ end
 function SetPixS()
     local pixS = tonumber(SKIN:GetVariable('PixSSet'))
     if pixS and pixS > 0 then
-        SKIN:Bang('[!SetOptionGroup P W "#PixSSet#"][!SetOptionGroup P H "#PixSSet#"][!SetOption PixSSet Text "#PixSSet#"][!SetVariable PixS "#PixSSet#"][!WriteKeyValue Variables PixS "#PixSSet#" "#@#Settings.inc"][!SetOption Handle MouseLeaveAction "[!HideMeterGroup Control][!HideMeterGroup Set][!SetOption Handle SolidColor 00000001][!UpdateMeter Handle][!Redraw]"][!UpdateMeter *][!Redraw]')
+        SKIN:Bang('[!SetOptionGroup P W "#PixSSet#"][!SetOptionGroup P H "#PixSSet#"][!SetOption PixSSet Text "#PixSSet#"][!SetVariable PixS "#PixSSet#"][!WriteKeyValue Variables PixS "#PixSSet#" "#@#Settings.inc"][!EnableMouseAction Handle MouseLeaveAction][!UpdateMeter *][!Redraw]')
     end
 end
 
@@ -224,7 +224,7 @@ end
 
 function SetColor()
     if SKIN:GetVariable('ColorSet') ~= '' then
-        SKIN:Bang('[!SetOptionGroup P SolidColor "#ColorSet#"][!SetOption ColorSet Text "#ColorSet#"][!SetVariable Color "#ColorSet#"][!WriteKeyValue Variables Color "#ColorSet#" "#@#Settings.inc"][!SetOption Handle MouseLeaveAction "[!HideMeterGroup Control][!HideMeterGroup Set][!SetOption Handle SolidColor 00000001][!UpdateMeter Handle][!Redraw]"][!UpdateMeter *][!Redraw]')
+        SKIN:Bang('[!SetOptionGroup P SolidColor "#ColorSet#"][!SetOption ColorSet Text "#ColorSet#"][!SetVariable Color "#ColorSet#"][!WriteKeyValue Variables Color "#ColorSet#" "#@#Settings.inc"][!EnableMouseAction Handle MouseLeaveAction][!UpdateMeter *][!Redraw]')
     end
 end
 
