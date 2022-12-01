@@ -1,23 +1,24 @@
-# Hologram Point Cloud
+# Hologram
 ###### for [Rainmeter](https://www.rainmeter.net/)
-Renders 3D models as point clouds.
+Renders 3D models as wireframes.
 
 ## Features
 
 * Scale, rotate, and apply perspective to model
+* Render vertices, edges, and/or faces
 * Optional auto-rotation
-* Optional edge interpolation renders edges as points
 * Automatically fits and centers model
 * Uses no CPU while not being interacted with
 * Supports STL and OBJ files
-* Provides self-calibrating load time estimates
 
 ## Comparison of versions
-|| Wireframe | Point Cloud |
+|| Wireframe | [Point Cloud](/../../tree/point-cloud) |
 |---|---|---|
 | Load time | None. | Many minutes or hours depending on model complexity. Once points are loaded, other models of equal or lesser complexity load instantly. |
 | Render time | Slow. All but very low poly models have multi-second render times. However, even high complexity models render in less than 20 seconds. | Fast. Much more suited for animation, such as auto-rotation. |
 | Render quality | High. Indistinguishable from actual 3D software. | Only renders vertices, so models with long straight edges may look strange. This can be slightly improved with edge interpolation. |
+
+###### [Full description and download](http://killall-q.deviantart.com/art/Hologram-590866523)
 
 ---
 

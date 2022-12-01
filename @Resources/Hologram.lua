@@ -1,6 +1,4 @@
 function Initialize()
-  point = {} -- array of points
-  edge = tonumber(SKIN:GetVariable('Edge')) -- edge interpolation setting
   maxR = 0 -- max radius of model from origin
   xyScale = 0 -- scale of display and model
   dispR = tonumber(SKIN:GetVariable('DispR')) -- half of display width
@@ -8,29 +6,79 @@ function Initialize()
   phi = tonumber(SKIN:GetVariable('Phi')) -- roll angle
   psi = tonumber(SKIN:GetVariable('Psi')) -- yaw angle
   omega = tonumber(SKIN:GetVariable('Omega')) -- delta of yaw angle (angular velocity)
-  loadTCoeff = tonumber(SKIN:GetVariable('LoadTCoeff')) -- load time estimation coefficient
   perspective = tonumber(SKIN:GetVariable('Perspective'))
+  viewMode = tonumber(SKIN:GetVariable('ViewMode'))
   scroll = 0 -- file browser scroll position
   hasMoved = false
+  hasRendered = false
+  isRenderFast = false
   local update = SKIN:GetVariable('Update')
-  SKIN:Bang('[!SetOption Edge'..(edge or 0)..'xSet SolidColor FF0000][!SetOption Edge'..(edge or 0)..'xSet MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!SetOption PerspectiveSlider X '..(perspective * 90)..'r][!SetOption Omega'..update..' SolidColor FF0000][!ClearMouseAction Omega'..update..' LeftMouseUpAction][!SetOption Omega'..update..' MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!SetOption OmegaSlider X '..(45 + omega * 2250)..'r][!SetOption OmegaVal Text '..(omega * 250)..']')
+  SKIN:Bang('[!SetOption PerspectiveSlider X '..(perspective * 90)..'r][!SetOption Omega'..update..' SolidColor FF0000][!ClearMouseAction Omega'..update..' LeftMouseUpAction][!SetOption Omega'..update..' MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!SetOption OmegaSlider X '..(45 + omega * 2250)..'r][!SetOption OmegaVal Text '..(omega * 250)..']')
   if update == '-1' then
     omega = 0
     SKIN:Bang('[!SetOption OmegaSlider SolidColor FFFFFF80][!SetOption OmegaVal FontColor FFFFFF80][!SetOption OmegaSet SolidColor 50505060][!ClearMouseAction OmegaSet LeftMouseUpAction][!ClearMouseAction OmegaSet MouseScrollUpAction][!ClearMouseAction OmegaSet MouseScrollDownAction][!DisableMouseAction OmegaSet MouseOverAction][!DisableMouseAction OmegaSet MouseLeaveAction]')
   end
   LoadFile(SKIN:ReplaceVariables(SKIN:GetVariable('Path')), SKIN:GetVariable('File'))
+  SetView(viewMode)
+  Render()
 end
 
 function Update()
   if not hasMoved and omega == 0 then return end
-  hasMoved, psi = false, (psi + omega) % 6.28
-  local sinTheta, cosTheta, sinPhi, cosPhi, sinPsi, cosPsi = math.sin(theta), math.cos(theta), math.sin(phi), math.cos(phi), math.sin(psi), math.cos(psi)
-  for i = 1, #v.x do
-    local zDepthScale = 1 - ((v.z[i] * cosPhi - (v.x[i] * cosPsi + v.y[i] * sinPsi) * sinPhi) * -sinTheta + (v.y[i] * cosPsi - v.x[i] * sinPsi) * cosTheta) / maxR * perspective
-    point[i]:SetX((v.z[i] * sinPhi + (v.x[i] * cosPsi + v.y[i] * sinPsi) * cosPhi) * xyScale * zDepthScale + dispR)
-    point[i]:SetY(((v.z[i] * cosPhi - (v.x[i] * cosPsi + v.y[i] * sinPsi) * sinPhi) * cosTheta + (v.y[i] * cosPsi - v.x[i] * sinPsi) * sinTheta) * -xyScale * zDepthScale + dispR)
+  hasMoved, hasRendered, psi = false, false, (psi + omega) % 6.28
+  if isRenderFast then
+    Render()
+    return
   end
-  SKIN:Bang('!UpdateMeterGroup P')
+  -- Render simple axial plane circles for responsive interaction
+  local trigFuncs, c1, c2, c3 = { math.sin(theta), math.cos(theta), math.sin(phi), math.cos(phi), math.sin(psi), math.cos(psi) }, '', '', ''
+  for i = 1, 72 do
+    local cx1, cy1 = GetScreenCoords(c.x[i], c.y[i], 0, unpack(trigFuncs))
+    local cx2, cy2 = GetScreenCoords(c.x[i], 0, c.y[i], unpack(trigFuncs))
+    local cx3, cy3 = GetScreenCoords(0, c.x[i], c.y[i], unpack(trigFuncs))
+    c1 = c1..(i ~= 1 and '|LineTo ' or '')..cx1..','..cy1
+    c2 = c2..(i ~= 1 and '|LineTo ' or '')..cx2..','..cy2
+    c3 = c3..(i ~= 1 and '|LineTo ' or '')..cx3..','..cy3
+  end
+  SKIN:Bang('[!SetOption Render Shape2 "Path Path2|Stroke Color 0070FF|Extend Circle"][!SetOption Render Path2 "'..c1..'|ClosePath 1"][!SetOption Render Shape3 "Path Path3|Stroke Color 00FF00|Extend Circle"][!SetOption Render Path3 "'..c2..'|ClosePath 1"][!SetOption Render Shape4 "Path Path4|Stroke Color FF0000|Extend Circle"][!SetOption Render Path4 "'..c3..'|ClosePath 1"][!SetOption Render Shape5 ""][!UpdateMeter Render][!SetOption Handle Text "CLICK TO RENDER"][!UpdateMeter Handle][!Redraw]')
+end
+
+function Render()
+  if hasRendered then return end
+  hasRendered = true
+  if not isRenderFast then
+    SKIN:Bang('[!SetOption Handle Text "RENDERING..."][!UpdateMeter Handle][!Redraw]')
+  end
+  local trigFuncs, s, startT = { math.sin(theta), math.cos(theta), math.sin(phi), math.cos(phi), math.sin(psi), math.cos(psi) }, { x={}, y={} }, os.clock()
+  if viewMode == 0 then
+    -- Render vertices
+    for i = 1, #v.x do
+      s.x[1], s.y[1] = GetScreenCoords(v.x[i], v.y[i], v.z[i], unpack(trigFuncs))
+      SKIN:Bang('!SetOption', 'Render', 'Shape'..(i + 1), 'Ellipse '..s.x[1]..','..s.y[1]..',#EdgeThick#|Extend Attr')
+    end
+    SKIN:Bang('!SetOption Render Shape'..(#v.x + 2)..' ""')
+  else
+    -- Render edges and/or faces
+    for i = 1, #f[1] do
+      for j = 1, 3 do
+        s.x[j], s.y[j] = GetScreenCoords(v.x[f[j][i]], v.y[f[j][i]], v.z[f[j][i]], unpack(trigFuncs))
+      end
+      SKIN:Bang('[!SetOption Render Shape'..(i + 1)..' "Path Path'..(i + 1)..'|Extend Attr"][!SetOption Render Path'..(i + 1)..' "'..s.x[1]..','..s.y[1]..'|LineTo '..s.x[2]..','..s.y[2]..'|LineTo '..s.x[3]..','..s.y[3]..'|ClosePath 1"]')
+    end
+    SKIN:Bang('!SetOption Render Shape'..(#f[1] + 2)..' ""')
+  end
+  SKIN:Bang('[!UpdateMeter Render][!SetOption Handle Text ""][!UpdateMeter Handle][!Redraw]')
+  local elapsedT = os.clock() - startT
+  isRenderFast = elapsedT < 0.5
+  if isRenderFast then return end
+  print('Hologram: rendered '..(viewMode == 0 and #v.x..' vertices' or #f[1]..' faces')..' in '..('%.3f'):format(elapsedT)..' seconds')
+end
+
+function GetScreenCoords(x, y, z, sinTheta, cosTheta, sinPhi, cosPhi, sinPsi, cosPsi)
+  local szScale = 1 - ((z * cosPhi - (x * cosPsi + y * sinPsi) * sinPhi) * -sinTheta + (y * cosPsi - x * sinPsi) * cosTheta) / maxR * perspective
+  local sx = (z * sinPhi + (x * cosPsi + y * sinPsi) * cosPhi) * xyScale * szScale + dispR
+  local sy = ((z * cosPhi - (x * cosPsi + y * sinPsi) * sinPhi) * cosTheta + (y * cosPsi - x * sinPsi) * sinTheta) * -xyScale * szScale + dispR
+  return sx, sy
 end
 
 function Pitch(n, reset)
@@ -52,7 +100,7 @@ function Scale(n)
   if dispR + n < 70 or SKIN:GetVariable('SCREENAREAWIDTH') / 2 < dispR + n then return end
   hasMoved, dispR = true, dispR + n
   xyScale = dispR / maxR
-  SKIN:Bang('[!MoveMeter '..dispR..' '..dispR..' Handle][!SetOption Handle W '..(dispR * 2)..'][!SetOption Handle H '..(dispR * 2)..'][!SetOption Handle FontSize '..(dispR * 0.2)..'][!Update][!WriteKeyValue Variables DispR '..dispR..' "#@#Settings.inc"]')
+  SKIN:Bang('[!MoveMeter '..dispR..' '..dispR..' Handle][!SetOptionGroup Render W '..(dispR * 2)..'][!SetOptionGroup Render H '..(dispR * 2)..'][!SetOption Handle FontSize '..(dispR * 0.1)..'][!SetOption Render Shape "Rectangle 0,0,'..(dispR * 2)..','..(dispR * 2)..'|Fill Color 00000000|StrokeWidth 0"][!Update][!WriteKeyValue Variables DispR '..dispR..' "#@#Settings.inc"]')
 end
 
 function InitScroll()
@@ -75,7 +123,7 @@ function ScrollList(n, m)
 end
 
 function HighlightSelected()
-  local name = tempName or SKIN:GetVariable('File')
+  local name = SKIN:GetVariable('File')
   SKIN:Bang('[!SetOptionGroup File SolidColor 505050E0][!SetOptionGroup File MouseLeaveAction ""]')
   for i = 1, 10 do
     if name == SKIN:GetMeasure('mFile'..i):GetStringValue() then
@@ -83,7 +131,6 @@ function HighlightSelected()
       break
     end
   end
-  SKIN:Bang('!UpdateMeterGroup File')
 end
 
 function SelectFile(n)
@@ -94,9 +141,9 @@ function SelectFile(n)
     SKIN:Bang('[!CommandMeasure mFile'..n..' FollowPath][!UpdateMeasure mPath]')
   else
     local path = SKIN:GetMeasure('mPath'):GetStringValue()
-    tempName = name
+    SKIN:Bang('[!WriteKeyValue Variables Path "'..path..'" "#@#Settings.inc"][!SetVariable File "'..name..'"][!WriteKeyValue Variables File "'..name..'" "#@#Settings.inc"]')
     HighlightSelected()
-    LoadFile(path, name, true)
+    LoadFile(path, name)
   end
 end
 
@@ -105,11 +152,11 @@ function FileContext(n)
   SKIN:Bang('!CommandMeasure mFile'..n..' ContextMenu')
 end
 
-function LoadFile(path, name, isScan)
-  v = { x={}, y={}, z={} } -- array of vertices
-  local file, ext, f, vHash, vIdx, numV, minX, maxX, minY, maxY, minZ, maxZ = io.open(path..name), name:sub(-4):lower(), { {}, {}, {} }, {}, {}, 0, math.huge, -math.huge, math.huge, -math.huge, math.huge, -math.huge
+function LoadFile(path, name)
+  v, f, c = { x={}, y={}, z={} }, { {}, {}, {} }, { x={}, y={} } -- arrays of vertices, faces, circumcircle vertices
+  local file, ext, vHash, vIdx, minX, maxX, minY, maxY, minZ, maxZ = io.open(path..name), name:sub(-4):lower(), {}, {}, math.huge, -math.huge, math.huge, -math.huge, math.huge, -math.huge
   if not file then
-    SKIN:Bang('!SetOption Handle Text "INVALID FILE"')
+    SKIN:Bang('[!SetOption Handle Text "INVALID FILE"][!UpdateMeter Handle][!Redraw]')
     Scale(0)
     return
   end
@@ -122,7 +169,6 @@ function LoadFile(path, name, isScan)
       minY, maxY = y < minY and y or minY, maxY < y and y or maxY
       minZ, maxZ = z < minZ and z or minZ, maxZ < z and z or maxZ
       vHash[hash] = #v.x
-      numV = numV + 1
     end
     vIdx[#vIdx + 1] = vHash[hash]
     return vHash[hash]
@@ -133,7 +179,6 @@ function LoadFile(path, name, isScan)
       -- ASCII STL
       for facet in data:gmatch('facet.-outer loop(.-)endloop.-endfacet') do
         local i = 1
-        numV = numV + (edge or 0) * 1.5
         for x, y, z in facet:gmatch('vertex%s+(%S+)%s+(%S+)%s+(%S+)') do
           f[i][#f[i] + 1] = GetVIdx(tonumber(x) or 0, tonumber(y) or 0, tonumber(z) or 0)
           i = i + 1
@@ -155,7 +200,6 @@ function LoadFile(path, name, isScan)
       while true do
         local facet = file:read(50)
         if not facet then break end
-        numV = numV + (edge or 0) * 1.5
         for i = 1, 3 do
           local pos = i * 12
           f[i][#f[i] + 1] = GetVIdx(BinToFloat32(facet:sub(pos + 1, pos + 4)), BinToFloat32(facet:sub(pos + 5, pos + 8)), BinToFloat32(facet:sub(pos + 9, pos + 12)))
@@ -168,120 +212,24 @@ function LoadFile(path, name, isScan)
       if line:sub(1, 2) == 'v ' then
         local x, y, z = line:match('v%s+(%S+)%s+(%S+)%s+(%S+)')
         GetVIdx(tonumber(x) or 0, tonumber(y) or 0, tonumber(z) or 0)
-      elseif edge and line:sub(1, 2) == 'f ' then
+      elseif line:sub(1, 2) == 'f ' then
         local v1, v2, v3 = line:match('f%s+(%d+)%s+(%d+)%s+(%d+)')
         f[1][#f[1] + 1], f[2][#f[2] + 1], f[3][#f[3] + 1] = vIdx[tonumber(v1)], vIdx[tonumber(v2)], vIdx[tonumber(v3)]
-        numV = numV + edge * 1.5
       end
     end
   end
   file:close()
-  if isScan then
-    if numV <= #point then
-      -- Load without refreshing
-      SKIN:Bang('[!SetVariable Edge '..(edge or '""')..'][!WriteKeyValue Variables Edge '..(edge or '""')..' "#@#Settings.inc"][!EnableMouseAction Handle MouseLeaveAction][!HideMeterGroup Est][!WriteKeyValue Variables Path "'..path..'" "#@#Settings.inc"][!SetVariable File "'..name..'"][!WriteKeyValue Variables File "'..name..'" "#@#Settings.inc"]')
-    else
-      EstimateLoadTime(numV)
-      return
-    end
-  end
-  -- Edge interpolation
-  if edge then
-    for i = 1, #f[1] do
-      for j = 1, 3 do
-        local jNext = j ~= 3 and j + 1 or 1
-        for e = 1, edge, 2 do
-          v.x[#v.x + 1] = v.x[f[j][i]] + (v.x[f[jNext][i]] - v.x[f[j][i]]) * e / (edge + 1)
-          v.y[#v.y + 1] = v.y[f[j][i]] + (v.y[f[jNext][i]] - v.y[f[j][i]]) * e / (edge + 1)
-          v.z[#v.z + 1] = v.z[f[j][i]] + (v.z[f[jNext][i]] - v.z[f[j][i]]) * e / (edge + 1)
-        end
-      end
-    end
-  end
-  -- Generate meters
-  if not SKIN:GetMeter(1) or #point ~= 0 and #v.x > #point then
-    GenMeters(#v.x)
-    return
-  end
-  -- Load meters into Lua memory
-  if #point == 0 then
-    while true do
-      local meter = SKIN:GetMeter(#point + 1)
-      if meter then
-        point[#point + 1] = meter
-      else break end
-    end
-    os.remove(SKIN:GetVariable('@')..'Meters.inc')
-    SKIN:Bang('[!SetVariable Points '..#point..'][!SetOption PreloadSet Text '..#point..']')
-  end
-  -- Hide unused points
-  for i = #v.x + 1, #point do
-    point[i]:SetX(0)
-    point[i]:SetY(-99)
-  end
   -- Fit and center model
   local offsetX, offsetY, offsetZ = (minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2
   maxR = ((maxX - offsetX)^2 + (maxY - offsetY)^2 + (maxZ - offsetZ)^2)^0.5
   for i = 1, #v.x do
     v.x[i], v.y[i], v.z[i] = v.x[i] - offsetX, v.y[i] - offsetY, v.z[i] - offsetZ
   end
+  -- Generate axial plane circles
+  for i = 1, 72 do
+    c.x[i], c.y[i] = math.sin(i * 6.28 / 72) * maxR, math.cos(i * 6.28 / 72) * maxR
+  end
   Scale(0)
-  -- Clock load
-  local benchT = tonumber(SKIN:GetVariable('BenchT'))
-  if benchT and #point ~= 0 then
-    local elapsedT = math.abs(os.clock() - benchT)
-    -- Use logarithmic function to dampen change in coefficient
-    loadTCoeff = (0.2 * math.log(elapsedT / (#point)^2 / loadTCoeff) + 1) * loadTCoeff
-    SKIN:Bang('[!SetVariable BenchT ""][!WriteKeyValue Variables BenchT "" "#@#Settings.inc"][!WriteKeyValue Variables LoadTCoeff '..loadTCoeff..' "#@#Settings.inc"]')
-    print('Hologram: loaded '..#point..' points in '..string.format('%s.%03u', os.date('!%H:%M:%S', elapsedT), math.fmod(elapsedT, 1) * 1000))
-  else
-    print('Hologram: '..#v.x..' points')
-  end
-end
-
-function EstimateLoadTime(p)
-  points = p
-  local estT = loadTCoeff * p^2
-  SKIN:Bang('[!SetOption EstTime Postfix '..string.format('%s.%03u', os.date('!%H:%M:%S', estT), math.fmod(estT, 1) * 1000)..'][!SetOption EstPoints Postfix '..p..'][!ClearMouseAction Handle MouseLeaveAction][!UpdateMeter Handle][!UpdateMeterGroup Est][!ShowMeterGroup Est][!Redraw]')
-end
-
-function GenMeters(p)
-  local file = io.open(SKIN:GetVariable('@')..'Meters.inc', 'w')
-  for i = 1, p do
-    file:write('['..i..']\nMeter=Image\nMeterStyle=P\n')
-  end
-  file:close()
-  SKIN:Bang('!Refresh')
-end
-
-function StartLoad()
-  local name = tempName or SKIN:GetVariable('File')
-  SKIN:Bang('[!WriteKeyValue Variables Theta 0.5 "#@#Settings.inc"][!WriteKeyValue Variables Phi 0 "#@#Settings.inc"][!WriteKeyValue Variables Psi 0.5 "#@#Settings.inc"][!WriteKeyValue Variables Path "'..SKIN:GetMeasure('mPath'):GetStringValue()..'" "#@#Settings.inc"][!SetVariable File "'..name..'"][!WriteKeyValue Variables File "'..name..'" "#@#Settings.inc"][!WriteKeyValue Variables Edge '..(edge or '""')..' "#@#Settings.inc"][!WriteKeyValue Variables BenchT '..os.clock()..' "#@#Settings.inc"]')
-  GenMeters(points)
-end
-
-function Cancel()
-  tempName = nil
-  HighlightSelected()
-  SetEdge(tonumber(SKIN:GetVariable('Edge')), true)
-  SKIN:Bang('[!HideMeterGroup Est][!EnableMouseAction Handle MouseLeaveAction][!Redraw]')
-end
-
-function Preload()
-  EstimateLoadTime(tonumber(SKIN:GetVariable('Set')))
-end
-
-function SetPixS()
-  local pixS = tonumber(SKIN:GetVariable('Set'))
-  if not pixS or pixS <= 0 then return end
-  SKIN:Bang('[!SetOptionGroup P W "#Set#"][!SetOptionGroup P H "#Set#"][!SetOption PixSSet Text "#Set#"][!SetVariable PixS "#Set#"][!WriteKeyValue Variables PixS "#Set#" "#@#Settings.inc"][!EnableMouseAction Handle MouseLeaveAction][!UpdateMeter *][!Redraw]')
-end
-
-function SetEdge(n, isCancel)
-  SKIN:Bang('[!SetOption Edge'..(edge or 0)..'xSet SolidColor 505050E0][!SetOption Edge'..(edge or 0)..'xSet MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor 505050E0][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!SetOption Edge'..(n or 0)..'xSet SolidColor FF0000][!SetOption Edge'..(n or 0)..'xSet MouseLeaveAction "[!SetOption #*CURRENTSECTION*# SolidColor FF0000][!UpdateMeter #*CURRENTSECTION*#][!Redraw]"][!WriteKeyValue Variables Edge '..(n or '""')..' "#@#Settings.inc"][!UpdateMeterGroup Edge]')
-  edge = tonumber(n)
-  if isCancel then return end
-  LoadFile(SKIN:ReplaceVariables(SKIN:GetVariable('Path')), SKIN:GetVariable('File'), true)
 end
 
 function SetPerspective(n, m)
@@ -293,9 +241,18 @@ function SetPerspective(n, m)
   SKIN:Bang('[!SetOption PerspectiveSlider X '..(perspective * 90)..'r][!SetOption PerspectiveVal Text '..perspective..'][!Update][!WriteKeyValue Variables Perspective '..perspective..' "#@#Settings.inc"]')
 end
 
-function SetColor()
-  if SKIN:GetVariable('Set') == '' then return end
-  SKIN:Bang('[!SetOptionGroup P SolidColor "#Set#"][!SetOption ColorSet Text "#Set#"][!SetVariable Color "#Set#"][!WriteKeyValue Variables Color "#Set#" "#@#Settings.inc"][!EnableMouseAction Handle MouseLeaveAction][!UpdateMeter *][!Redraw]')
+function SetView(n)
+  SKIN:Bang('[!SetOption Render Attr "Fill Color '..(1 < n and '#FaceColor#' or '00000000')..'|Stroke Color #EdgeColor#|StrokeWidth '..(n ~= 2 and '#EdgeThick#' or 0)..'|StrokeLineJoin Round"][!UpdateMeter Render][!SetOptionGroup View MeterStyle sSet|sSetVar][!SetOptionGroup View SolidColor 505050E0][!EnableMouseActionGroup LeftMouseUpAction View][!SetOption View'..n..' MeterStyle sSet|sSetVar|sSetSel][!SetOption View'..n..' SolidColor FF0000][!ClearMouseAction View'..n..' LeftMouseUpAction][!UpdateMeterGroup View][!Redraw][!WriteKeyValue Variables ViewMode '..n..' "#@#Settings.inc"]')
+  if viewMode == 0 or n == 0 then
+    hasMoved = true
+  end
+  viewMode = n
+  Update()
+end
+
+function SetVar(name)
+  if (function(set) return set == '' or tonumber(set) and tonumber(set) <= 0 end)(SKIN:GetVariable('Set')) then return end
+  SKIN:Bang('[!SetVariable '..name..' "#Set#"][!SetOption Render Attr "Fill Color '..(1 < viewMode and '#FaceColor#' or '00000000')..'|Stroke Color #EdgeColor#|StrokeWidth '..(viewMode ~= 2 and '#EdgeThick#' or 0)..'|StrokeLineJoin Round"][!UpdateMeter Render][!SetOption '..name..'Set Text "#Set#"][!EnableMouseAction Handle MouseLeaveAction][!Update][!WriteKeyValue Variables '..name..' "#Set#" "#@#Settings.inc"]')
 end
 
 function SetOmega(n, m)
