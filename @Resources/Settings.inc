@@ -1,5 +1,4 @@
 [Variables]
-PixS=1
 DispR=200
 Theta=0.3
 Phi=0
@@ -7,8 +6,10 @@ Psi=0.3
 Omega=0.004
 Perspective=0.2
 Update=-1
-File=#@#Models\Bunny.obj
+Path=#@#Models\
+File=Bunny.stl
+PixS=1
 Edge=8
+Color=FFFFFF
 BenchT=
 LoadTCoeff=5e-08
-Color=FFFFFF

@@ -1,4 +1,4 @@
-# Hologram
+# Hologram Point Cloud
 ###### for [Rainmeter](https://www.rainmeter.net/)
 Renders 3D models as point clouds.
 
@@ -9,20 +9,25 @@ Renders 3D models as point clouds.
 * Optional edge interpolation renders edges as points
 * Automatically fits and centers model
 * Uses no CPU while not being interacted with
-* Supports .obj files
+* Supports STL and OBJ files
 * Provides self-calibrating load time estimates
 
-###### [Full description and download](http://killall-q.deviantart.com/art/Hologram-590866523)
+## Comparison of versions
+|| Wireframe | Point Cloud |
+|---|---|---|
+| Load time | None. | Many minutes or hours depending on model complexity. Once points are loaded, other models of equal or lesser complexity load instantly. |
+| Render time | Slow. All but very low poly models have multi-second render times. However, even high complexity models render in less than 20 seconds. | Fast. Much more suited for animation, such as auto-rotation. |
+| Render quality | High. Indistinguishable from actual 3D software. | Only renders vertices, so models with long straight edges may look strange. This can be slightly improved with edge interpolation. |
 
 ---
 
-## Explanation of 3D Rendering Algorithm
+## Explanation of 3D rendering algorithm
 
 Hologram takes, for arbitrary points, 3D Cartesian coordinates (___x___, ___y___, ___z___) together with 3 angles of rotation (__pitch__, __roll__, __yaw__) and a perspective scalar, and translates them to screen space ___x___ and ___y___.
 
 Let's build its algorithm from the ground up.
 
-#### No Rotation or Perspective
+#### No rotation or perspective
 ![Teapot1](Readme%20Images/Teapot1.png)
 
 Suppose you have an orthographic view of a set of points in 3D space such that the _y_-axis is parallel to your line of sight, with no rotation or perspective. In this situation, the _y_ coordinates of the points do not matter.
@@ -33,7 +38,7 @@ As such, the translation of those coordinates to screen space is very simple.
 
 We establish here that our viewport, for ease of implementation, is a square with the origin of the 3D space at its center. The _x_-axis of the viewport faces right and the _y_-axis faces down, as they do on your screen. The _z_-axis of the 3D space we are viewing faces up, so _z_ coordinates must be flipped to compute screen space _y_ coordinates.
 
-#### One Angle of Rotation: Pitch
+#### One angle of rotation: pitch
 ![Teapot2](Readme%20Images/Teapot2.png)
 
 Now we add pitch, which is rotation about the _x_-axis, or swivel up/down. This addition doesn't affect the _x_ coordinate.
@@ -46,7 +51,7 @@ There are mathematical tools that describe smooth oscillation between 1 and -1, 
 
 We know to multiply the _z_ coordinate by cosine of the pitch angle because at 0 degrees, it must be multiplied by 1. Similar logic follows for the _y_ coordinate.
 
-#### Two Angles of Rotation: Pitch & Roll
+#### Two angles of rotation: pitch & roll
 ![Teapot3](Readme%20Images/Teapot3.png)
 
 Roll, _φ_ (phi), is rotation about _y_-axis, only, in this implementation, the _y_-axis of rotation itself is subject to the pitch angle. It works exactly like a [gimbal](https://en.wikipedia.org/wiki/Gimbal).
@@ -59,7 +64,7 @@ This may be easier to picture if you imagine that the 3D object you are rotating
 
 Now if you mark a dot on this disc whose pitch rotation we have already explained, the position of that dot will vary on the plane of the disc based on the effect of the roll angle on the _x_ and _z_ coordinates of the dot. At 0 roll angle, the dot's _x_ coordinate is all that matters to screen space _x_, and the dot's _z_ coordinate is all that matters to screen space _y_... thus we know where to apply sine and cosine.
 
-#### Three Angles of Rotation: Pitch, Roll, & Yaw
+#### Three angles of rotation: pitch, roll, & yaw
 ![Teapot4](Readme%20Images/Teapot4.png)
 
 Yaw, _ψ_ (psi), is rotation about the _z_-axis. As you might guess, the _z_-axis of rotation is subject to the pitch _and_ roll angles.
