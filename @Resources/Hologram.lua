@@ -50,9 +50,15 @@ end
 
 function Scale(n)
   if dispR + n < 70 or SKIN:GetVariable('SCREENAREAWIDTH') / 2 < dispR + n then return end
+  local isVisible = SKIN:GetMeter('PathLabel'):GetW() ~= 0
   hasMoved, dispR = true, dispR + n
   xyScale = dispR / maxR
-  SKIN:Bang('[!MoveMeter '..dispR..' '..dispR..' Handle][!SetOption Handle W '..(dispR * 2)..'][!SetOption Handle H '..(dispR * 2)..'][!SetOption Handle FontSize '..(dispR * 0.2)..'][!Update][!WriteKeyValue Variables DispR '..dispR..' "#@#Settings.inc"]')
+  SKIN:Bang('[!SetOption Handle W '..math.max(dispR * 2, isVisible and 320 or 0)..'][!SetOption Handle H '..math.max(dispR * 2, isVisible and 550 or 0)..'][!MoveMeter '..dispR..' '..dispR..' Status][!SetOption Status FontSize '..(dispR * 0.2)..'][!Update][!WriteKeyValue Variables DispR '..dispR..' "#@#Settings.inc"]')
+end
+
+function ToggleSet(hide)
+  local isVisible = not hide and SKIN:GetMeter('PathLabel'):GetW() == 0 or false
+  SKIN:Bang('[!'..(hide and 'Hide' or 'Toggle')..'MeterGroup Set][!SetOption Handle W '..math.max(dispR * 2, isVisible and 320 or 0)..'][!SetOption Handle H '..math.max(dispR * 2, isVisible and 550 or 0)..'][!UpdateMeter Handle][!Redraw]')
 end
 
 function InitScroll()
@@ -109,7 +115,7 @@ function LoadFile(path, name, isScan)
   v = { x={}, y={}, z={} } -- array of vertices
   local file, ext, f, vHash, vIdx, numV, minX, maxX, minY, maxY, minZ, maxZ = io.open(path..name), name:sub(-4):lower(), { {}, {}, {} }, {}, {}, 0, math.huge, -math.huge, math.huge, -math.huge, math.huge, -math.huge
   if not file then
-    SKIN:Bang('!SetOption Handle Text "INVALID FILE"')
+    SKIN:Bang('!SetOption Status Text "INVALID FILE"')
     Scale(0)
     return
   end
@@ -233,7 +239,7 @@ function LoadFile(path, name, isScan)
     -- Use logarithmic function to dampen change in coefficient
     loadTCoeff = (0.2 * math.log(elapsedT / (#point)^2 / loadTCoeff) + 1) * loadTCoeff
     SKIN:Bang('[!SetVariable BenchT ""][!WriteKeyValue Variables BenchT "" "#@#Settings.inc"][!WriteKeyValue Variables LoadTCoeff '..loadTCoeff..' "#@#Settings.inc"]')
-    print('Hologram: loaded '..#point..' points in '..string.format('%s.%03u', os.date('!%H:%M:%S', elapsedT), math.fmod(elapsedT, 1) * 1000))
+    print('Hologram: loaded '..#point..' points in '..('%s.%03u'):format(os.date('!%H:%M:%S', elapsedT), math.fmod(elapsedT, 1) * 1000))
   else
     print('Hologram: '..#v.x..' points')
   end
