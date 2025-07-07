@@ -40,14 +40,14 @@ function Update()
     c2 = c2..(i ~= 1 and '|LineTo ' or '')..cx2..','..cy2
     c3 = c3..(i ~= 1 and '|LineTo ' or '')..cx3..','..cy3
   end
-  SKIN:Bang('[!SetOption Render Shape2 "Path Path2|Stroke Color 0070FF|Extend Circle"][!SetOption Render Path2 "'..c1..'|ClosePath 1"][!SetOption Render Shape3 "Path Path3|Stroke Color 00FF00|Extend Circle"][!SetOption Render Path3 "'..c2..'|ClosePath 1"][!SetOption Render Shape4 "Path Path4|Stroke Color FF0000|Extend Circle"][!SetOption Render Path4 "'..c3..'|ClosePath 1"][!SetOption Render Shape5 ""][!UpdateMeter Render][!SetOption Handle Text "CLICK TO RENDER"][!UpdateMeter Handle][!Redraw]')
+  SKIN:Bang('[!SetOption Render Shape2 "Path Path2|Stroke Color 0070FF|Extend Circle"][!SetOption Render Path2 "'..c1..'|ClosePath 1"][!SetOption Render Shape3 "Path Path3|Stroke Color 00FF00|Extend Circle"][!SetOption Render Path3 "'..c2..'|ClosePath 1"][!SetOption Render Shape4 "Path Path4|Stroke Color FF0000|Extend Circle"][!SetOption Render Path4 "'..c3..'|ClosePath 1"][!SetOption Render Shape5 ""][!UpdateMeter Render][!SetOption Status Text "CLICK TO RENDER"][!UpdateMeter Status][!Redraw]')
 end
 
 function Render()
   if hasRendered then return end
   hasRendered = true
   if not isRenderFast then
-    SKIN:Bang('[!SetOption Handle Text "RENDERING..."][!UpdateMeter Handle][!Redraw]')
+    SKIN:Bang('[!SetOption Status Text "RENDERING..."][!UpdateMeter Status][!Redraw]')
   end
   local trigFuncs, s, startT = { math.sin(theta), math.cos(theta), math.sin(phi), math.cos(phi), math.sin(psi), math.cos(psi) }, { x={}, y={} }, os.clock()
   if viewMode == 0 then
@@ -67,7 +67,7 @@ function Render()
     end
     SKIN:Bang('!SetOption Render Shape'..(#f[1] + 2)..' ""')
   end
-  SKIN:Bang('[!UpdateMeter Render][!SetOption Handle Text ""][!UpdateMeter Handle][!Redraw]')
+  SKIN:Bang('[!UpdateMeter Render][!SetOption Status Text ""][!UpdateMeter Status][!Redraw]')
   local elapsedT = os.clock() - startT
   isRenderFast = elapsedT < 0.5
   if isRenderFast then return end
@@ -98,9 +98,15 @@ end
 
 function Scale(n)
   if dispR + n < 70 or SKIN:GetVariable('SCREENAREAWIDTH') / 2 < dispR + n then return end
+  local isVisible = SKIN:GetMeter('PathLabel'):GetW() ~= 0
   hasMoved, dispR = true, dispR + n
   xyScale = dispR / maxR
-  SKIN:Bang('[!MoveMeter '..dispR..' '..dispR..' Handle][!SetOptionGroup Render W '..(dispR * 2)..'][!SetOptionGroup Render H '..(dispR * 2)..'][!SetOption Handle FontSize '..(dispR * 0.1)..'][!SetOption Render Shape "Rectangle 0,0,'..(dispR * 2)..','..(dispR * 2)..'|Fill Color 00000000|StrokeWidth 0"][!Update][!WriteKeyValue Variables DispR '..dispR..' "#@#Settings.inc"]')
+  SKIN:Bang('[!SetOption Handle W '..math.max(dispR * 2, isVisible and 360 or 0)..'][!SetOption Handle H '..math.max(dispR * 2, isVisible and 550 or 0)..'][!MoveMeter '..dispR..' '..dispR..' Status][!SetOption Status FontSize '..(dispR * 0.1)..'][!SetOption Render Shape "Rectangle 0,0,'..(dispR * 2)..','..(dispR * 2)..'|Fill Color 00000000|StrokeWidth 0"][!Update][!WriteKeyValue Variables DispR '..dispR..' "#@#Settings.inc"]')
+end
+
+function ToggleSet(hide)
+  local isVisible = not hide and SKIN:GetMeter('PathLabel'):GetW() == 0 or false
+  SKIN:Bang('[!'..(hide and 'Hide' or 'Toggle')..'MeterGroup Set][!SetOption Handle W '..math.max(dispR * 2, isVisible and 360 or 0)..'][!SetOption Handle H '..math.max(dispR * 2, isVisible and 550 or 0)..'][!UpdateMeter Handle][!Redraw]')
 end
 
 function InitScroll()
@@ -156,7 +162,7 @@ function LoadFile(path, name)
   v, f, c = { x={}, y={}, z={} }, { {}, {}, {} }, { x={}, y={} } -- arrays of vertices, faces, circumcircle vertices
   local file, ext, vHash, vIdx, minX, maxX, minY, maxY, minZ, maxZ = io.open(path..name), name:sub(-4):lower(), {}, {}, math.huge, -math.huge, math.huge, -math.huge, math.huge, -math.huge
   if not file then
-    SKIN:Bang('[!SetOption Handle Text "INVALID FILE"][!UpdateMeter Handle][!Redraw]')
+    SKIN:Bang('[!SetOption Status Text "INVALID FILE"][!UpdateMeter Status][!Redraw]')
     Scale(0)
     return
   end
